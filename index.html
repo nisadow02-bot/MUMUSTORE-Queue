@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MUMUSTORE — Queue Management System</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts: Prompt & Mitr -->
+    <link href="https://fonts.googleapis.com/css2?family=Mitr:wght@300;400;500;600&family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        powder: {
+                            50: '#fff5f7',
+                            100: '#ffe3eb',
+                            200: '#ffcddb',
+                            300: '#ffa8c0',
+                            400: '#ff7299',
+                            500: '#f84b7a',
+                            600: '#e32258',
+                        },
+                        pastel: {
+                            purple: '#e2d4f8',
+                            blue: '#d4e6f8',
+                            yellow: '#fdf3d1',
+                            green: '#d4f8e3',
+                            pink: '#ffdce5',
+                            cream: '#fffaf5'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Prompt', 'sans-serif'],
+                        heading: ['Mitr', 'sans-serif'],
+                    },
+                    boxShadow: {
+                        'cute': '0 8px 25px -5px rgba(255, 168, 192, 0.35), 0 4px 10px -6px rgba(255, 168, 192, 0.2)',
+                        'cute-sm': '0 4px 15px -3px rgba(255, 168, 192, 0.25)',
+                        'inner-cute': 'inset 0 2px 6px 0 rgba(255, 114, 153, 0.15)',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            font-family: 'Prompt', sans-serif;
+            background: linear-gradient(135deg, #fff0f5 0%, #fae3eb 50%, #f7d6e0 100%);
+            min-height: 100vh;
+        }
+
+        /* Cute Keyframe Animations */
+        @keyframes floatCute {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-8px) rotate(4deg); }
+        }
+
+        @keyframes pulseGlow {
+            0%, 100% { transform: scale(1); opacity: 0.9; }
+            50% { transform: scale(1.15); opacity: 1; filter: drop-shadow(0 0 8px rgba(255, 114, 153, 0.8)); }
+        }
+
+        @keyframes rotateSparkle {
+            0% { transform: rotate(0deg) scale(1); }
+            50% { transform: rotate(180deg) scale(1.2); }
+            100% { transform: rotate(360deg) scale(1); }
+        }
+
+        @keyframes bounceHeart {
+            0%, 100% { transform: translateY(0) scale(1); }
+            30% { transform: translateY(-6px) scale(1.1); }
+            50% { transform: translateY(0) scale(0.95); }
+            70% { transform: translateY(-3px) scale(1.05); }
+        }
+
+        .animate-float-cute {
+            animation: floatCute 3s ease-in-out infinite;
+        }
+
+        .animate-pulse-glow {
+            animation: pulseGlow 2s ease-in-out infinite;
+        }
+
+        .animate-sparkle {
+            animation: rotateSparkle 4s linear infinite;
+        }
+
+        .animate-heart {
+            animation: bounceHeart 1.8s ease-in-out infinite;
+        }
+
+        /* Glassmorphic card design */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.82);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 2px solid rgba(255, 255, 255, 0.9);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #fff0f5;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #ffa8c0;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #ff7299;
+        }
+    </style>
+</head>
+<body class="p-3 md:p-6 text-gray-700">
+
+    <!-- Main Mobile Shell Container (Phone View Style) -->
+    <div class="max-w-md mx-auto relative bg-white/60 rounded-[38px] p-4 md:p-5 shadow-2xl border-4 border-white/80 backdrop-blur-md">
+        
+        <!-- Header Section -->
+        <header class="flex justify-between items-center px-2 py-2 mb-3">
+            <div>
+                <div class="flex items-center gap-2">
+                    <h1 class="text-2xl font-bold tracking-wider text-powder-500 font-heading flex items-center gap-1.5">
+                        <i class="fa-solid font-bold fa-heart text-powder-400 text-lg animate-heart"></i>
+                        MUMUSTORE
+                    </h1>
+                    <span id="adminBadge" class="bg-powder-100 text-powder-600 text-[10px] font-semibold px-2 py-0.5 rounded-full border border-powder-300">
+                        ADMIN
+                    </span>
+                </div>
+                <p class="text-xs text-powder-400 font-medium ml-1">─ CHECK QUEUE ─</p>
+            </div>
+
+            <div class="flex items-center gap-2">
+                <!-- Toggle Mode Button -->
+                <button onclick="toggleAdminMode()" id="adminToggleBtn" title="สลับโหมด Admin / Customer" 
+                        class="bg-white/80 hover:bg-powder-100 text-powder-500 border border-powder-200 p-2 rounded-2xl shadow-sm transition-all duration-200 flex items-center gap-1.5 text-xs font-medium">
+                    <i class="fa-solid fa-sliders text-sm"></i>
+                    <span id="adminToggleText">โหมดแอดมิน</span>
+                </button>
+
+                <!-- Avatar Profile -->
+                <div class="w-10 h-10 rounded-2xl bg-powder-200 p-0.5 shadow-sm border border-white">
+                    <img id="avatarImg" src="https://api.dicebear.com/7.x/bottts-neutral/svg?seed=MumuCuteCat" alt="Profile Avatar" class="w-full h-full rounded-2xl bg-powder-50 object-cover">
+                </div>
+            </div>
+        </header>
+
+        <!-- Banner / Photo Display Section -->
+        <div class="relative group rounded-3xl overflow-hidden mb-4 shadow-cute border-2 border-white bg-powder-100 transition-all duration-300">
+            <img id="storeBanner" src="https://placehold.co/600x320/ffdce5/ff7299?text=✨+MUMUSTORE+CUTE+SHOP+✨" alt="Store Banner" class="w-full h-36 md:h-40 object-cover rounded-3xl">
+            
+            <div class="absolute inset-0 bg-gradient-to-t from-powder-500/30 to-transparent opacity-60"></div>
+            
+            <!-- Banner Overlay Info -->
+            <div class="absolute bottom-2 left-3 right-3 flex justify-between items-center text-white drop-shadow-md">
+                <span class="text-xs bg-white/80 text-powder-600 font-medium px-2.5 py-1 rounded-full backdrop-blur-sm shadow-sm flex items-center gap-1">
+                    <i class="fa-solid fa-store text-[10px]"></i> ร้านรับทำกราฟิก & ออกแบบ
+                </span>
+                <!-- Change Banner Button (Visible in Admin) -->
+                <button id="changeBannerBtn" onclick="openBannerModal()" class="bg-white/90 text-powder-500 hover:bg-white p-1.5 px-2.5 rounded-xl text-xs font-semibold shadow transition-transform active:scale-95 flex items-center gap-1">
+                    <i class="fa-solid fa-image"></i> เปลี่ยนรูป
+                </button>
+            </div>
+        </div>
+
+        <!-- Top Highlighted Stats (คิวปัจจุบัน & คิวถัดไป) -->
+        <div class="grid grid-cols-2 gap-3 mb-4">
+            
+            <!-- 1. คิวที่กำลังทำ (Current Active Queue) -->
+            <div class="glass-card rounded-3xl p-3.5 relative overflow-hidden shadow-cute border-powder-200 bg-gradient-to-br from-white via-powder-50 to-powder-100/60">
+                <div class="flex justify-between items-start">
+                    <span class="text-[11px] font-bold text-powder-500 uppercase tracking-wide flex items-center gap-1">
+                        <i class="fa-solid fa-spinner animate-spin text-powder-400 text-xs"></i> กำลังทำ
+                    </span>
+                    <!-- Cute Moving Icon indicator -->
+                    <div class="relative flex items-center justify-center">
+                        <i class="fa-solid fa-wand-magic-sparkles text-powder-400 text-sm animate-sparkle"></i>
+                        <span class="absolute -top-1 -right-1 w-2 h-2 bg-powder-500 rounded-full animate-ping"></span>
+                    </div>
+                </div>
+
+                <div class="mt-2 text-center">
+                    <div id="currentQueueNum" class="text-3xl font-extrabold text-powder-600 font-heading">
+                        -
+                    </div>
+                    <div id="currentCustomerName" class="text-xs font-semibold text-gray-700 mt-0.5 truncate px-1">
+                        ยังไม่มีคิว
+                    </div>
+                </div>
+
+                <!-- Animated Cute Decoration -->
+                <div class="mt-2 pt-1.5 border-t border-powder-200/60 flex justify-between items-center text-[10px] text-powder-400 font-medium">
+                    <span class="flex items-center gap-1">
+                        <i class="fa-solid fa-cat animate-float-cute text-powder-400"></i> ทำงานอยู่
+                    </span>
+                    <span class="bg-powder-200/80 text-powder-600 px-1.5 py-0.5 rounded-md font-mono" id="currentPlatformBadge">
+                        -
+                    </span>
+                </div>
+            </div>
+
+            <!-- 2. คิวถัดไป (Next Queue) -->
+            <div class="glass-card rounded-3xl p-3.5 relative overflow-hidden shadow-cute-sm border-white bg-gradient-to-br from-white to-pastel-pink/40">
+                <div class="flex justify-between items-start">
+                    <span class="text-[11px] font-bold text-gray-500 uppercase tracking-wide flex items-center gap-1">
+                        <i class="fa-solid fa-forward text-powder-400 text-xs"></i> คิวถัดไป
+                    </span>
+                    <i class="fa-solid fa-star text-amber-300 text-xs animate-pulse"></i>
+                </div>
+
+                <div class="mt-2 text-center">
+                    <div id="nextQueueNum" class="text-3xl font-extrabold text-gray-600 font-heading">
+                        -
+                    </div>
+                    <div id="nextCustomerName" class="text-xs font-semibold text-gray-600 mt-0.5 truncate px-1">
+                        ไม่มีคิวถัดไป
+                    </div>
+                </div>
+
+                <div class="mt-2 pt-1.5 border-t border-gray-100 flex justify-between items-center text-[10px] text-gray-400 font-medium">
+                    <span>ลำดับที่ 2</span>
+                    <span id="totalQueueCountBadge" class="bg-white text-powder-500 px-1.5 py-0.5 rounded-md border border-powder-100 font-semibold">
+                        รอ 0 คิว
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Admin Action Bar (Advance Queue) -->
+        <div id="adminQuickActions" class="mb-4 bg-white/90 p-2.5 rounded-2xl shadow-sm border border-powder-200 flex items-center justify-between gap-2">
+            <span class="text-xs font-bold text-powder-600 flex items-center gap-1.5 ml-1">
+                <i class="fa-solid fa-wand-sparkles text-powder-400"></i> จัดการคิวด่วน:
+            </span>
+            <button onclick="advanceQueue()" class="bg-gradient-to-r from-powder-400 to-powder-500 hover:from-powder-500 hover:to-powder-600 text-white font-semibold text-xs py-1.5 px-3.5 rounded-xl shadow-cute-sm transition-all duration-200 active:scale-95 flex items-center gap-1.5">
+                <i class="fa-solid fa-circle-play text-sm"></i> เรียกคิวถัดไป
+            </button>
+        </div>
+
+        <!-- Queue List Header -->
+        <div class="flex justify-between items-center mb-2.5 px-1">
+            <h2 class="text-sm font-bold text-gray-700 flex items-center gap-1.5">
+                <i class="fa-solid fa-list-check text-powder-400"></i> รายการคิวลูกค้า
+            </h2>
+            <span class="text-[11px] text-powder-500 bg-powder-100 px-2 py-0.5 rounded-full font-medium" id="queueSummaryText">
+                ทั้งหมด 0 รายการ
+            </span>
+        </div>
+
+        <!-- Customer Queue List Container -->
+        <div id="queueListContainer" class="space-y-2.5 max-h-[380px] overflow-y-auto pr-1 pb-12">
+            <!-- Queue items will be rendered dynamically here -->
+        </div>
+
+        <!-- Floating Action Button (FAB) to Add Queue -->
+        <button id="addQueueFab" onclick="openAddQueueModal()" 
+                class="fixed bottom-6 right-6 md:absolute md:bottom-6 md:right-6 w-12 h-12 bg-gradient-to-r from-powder-400 to-powder-500 text-white rounded-full shadow-lg hover:shadow-cute flex items-center justify-center text-xl transition-transform hover:scale-110 active:scale-90 border-2 border-white z-20">
+            <i class="fa-solid fa-plus"></i>
+        </button>
+
+    </div>
+
+    <!-- MODAL 1: Add/Edit Queue Modal -->
+    <div id="queueModal" class="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 z-50 hidden opacity-0 transition-opacity duration-200">
+        <div class="bg-white rounded-3xl p-5 w-full max-w-sm shadow-2xl border-2 border-powder-100 transform scale-95 transition-transform duration-200" id="queueModalContent">
+            
+            <div class="flex justify-between items-center mb-4 pb-2 border-b border-powder-100">
+                <h3 class="text-base font-bold text-powder-600 flex items-center gap-1.5" id="modalTitle">
+                    <i class="fa-solid fa-heart-circle-plus text-powder-400"></i> เพิ่มคิวลูกค้าใหม่
+                </h3>
+                <button onclick="closeQueueModal()" class="text-gray-400 hover:text-gray-600 p-1">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <form id="queueForm" onsubmit="handleFormSubmit(event)" class="space-y-3 text-xs">
+                <input type="hidden" id="editQueueId">
+
+                <div>
+                    <label class="block font-medium text-gray-700 mb-1">ชื่อลูกค้า <span class="text-powder-500">*</span></label>
+                    <input type="text" id="inputCustomerName" required placeholder="เช่น น้องมูมู่ / K. Ann" 
+                           class="w-full px-3 py-2 rounded-xl border border-powder-200 focus:outline-none focus:ring-2 focus:ring-powder-300 bg-powder-50/50">
+                </div>
+
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block font-medium text-gray-700 mb-1">หมายเลขคิว</label>
+                        <input type="text" id="inputQueueNumber" placeholder="เช่น Q01, 01" 
+                               class="w-full px-3 py-2 rounded-xl border border-powder-200 focus:outline-none focus:ring-2 focus:ring-powder-300 bg-powder-50/50">
+                    </div>
+                    <div>
+                        <label class="block font-medium text-gray-700 mb-1">ช่องทาง (Platform)</label>
+                        <select id="inputPlatform" class="w-full px-3 py-2 rounded-xl border border-powder-200 focus:outline-none focus:ring-2 focus:ring-powder-300 bg-powder-50/50 font-medium">
+                            <option value="LINE">LINE</option>
+                            <option value="Facebook">Facebook</option>
+                            <option value="Instagram">Instagram</option>
+                            <option value="X (Twitter)">X (Twitter)</option>
+                            <option value="หน้าร้าน">หน้าร้าน</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block font-medium text-gray-700 mb-1">สถานะคิว</label>
+                    <select id="inputStatus" class="w-full px-3 py-2 rounded-xl border border-powder-200 focus:outline-none focus:ring-2 focus:ring-powder-300 bg-powder-50/50 font-medium">
+                        <option value="doing">กำลังทำ (In Progress)</option>
+                        <option value="next" selected>คิวถัดไป (Next Queue)</option>
+                        <option value="waiting">รอคิว (Waiting)</option>
+                        <option value="completed">เสร็จเรียบร้อย (Completed)</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block font-medium text-gray-700 mb-1">รายละเอียด / งานที่ทำ</label>
+                    <textarea id="inputNotes" rows="2" placeholder="เช่น บีบเค้กโทนชมพู, ออกแบบโลโก้..." 
+                              class="w-full px-3 py-2 rounded-xl border border-powder-200 focus:outline-none focus:ring-2 focus:ring-powder-300 bg-powder-50/50"></textarea>
+                </div>
+
+                <div class="pt-2 flex justify-end gap-2">
+                    <button type="button" onclick="closeQueueModal()" class="px-3.5 py-2 rounded-xl text-gray-500 hover:bg-gray-100 font-medium">
+                        ยกเลิก
+                    </button>
+                    <button type="submit" class="px-4 py-2 rounded-xl bg-gradient-to-r from-powder-400 to-powder-500 hover:from-powder-500 hover:to-powder-600 text-white font-bold shadow-cute-sm transition-all active:scale-95">
+                        บันทึกข้อมูล
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 2: Change Banner URL Modal -->
+    <div id="bannerModal" class="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 z-50 hidden opacity-0 transition-opacity duration-200">
+        <div class="bg-white rounded-3xl p-5 w-full max-w-sm shadow-2xl border-2 border-powder-100">
+            <div class="flex justify-between items-center mb-3">
+                <h3 class="text-sm font-bold text-powder-600 flex items-center gap-1.5">
+                    <i class="fa-solid fa-image text-powder-400"></i> ตั้งค่ารูปภาพ Banner
+                </h3>
+                <button onclick="closeBannerModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            
+            <div class="space-y-3 text-xs">
+                <div>
+                    <label class="block font-medium text-gray-700 mb-1">ใส่ URL รูปภาพ:</label>
+                    <input type="url" id="bannerUrlInput" placeholder="https://..." class="w-full px-3 py-2 rounded-xl border border-powder-200 focus:outline-none focus:ring-2 focus:ring-powder-300">
+                </div>
+
+                <div class="text-center text-gray-400 text-[11px] font-medium">─ หรือเลือกรูปตัวอย่างน่ารัก ─</div>
+
+                <div class="grid grid-cols-3 gap-2">
+                    <button onclick="selectPresetBanner('https://placehold.co/600x320/ffdce5/ff7299?text=✨+MUMUSTORE+CUTE+SHOP+✨')" class="border border-powder-200 rounded-xl p-1 hover:border-powder-400">
+                        <img src="https://placehold.co/600x320/ffdce5/ff7299?text=Pastel+Pink" class="rounded-lg h-10 w-full object-cover">
+                    </button>
+                    <button onclick="selectPresetBanner('https://placehold.co/600x320/e2d4f8/8b5cf6?text=✨+MUMUSTORE+LILAC+✨')" class="border border-powder-200 rounded-xl p-1 hover:border-powder-400">
+                        <img src="https://placehold.co/600x320/e2d4f8/8b5cf6?text=Lilac" class="rounded-lg h-10 w-full object-cover">
+                    </button>
+                    <button onclick="selectPresetBanner('https://placehold.co/600x320/d4e6f8/3b82f6?text=✨+MUMUSTORE+BABYBLUE+✨')" class="border border-powder-200 rounded-xl p-1 hover:border-powder-400">
+                        <img src="https://placehold.co/600x320/d4e6f8/3b82f6?text=Babyblue" class="rounded-lg h-10 w-full object-cover">
+                    </button>
+                </div>
+
+                <div class="pt-2 flex justify-end gap-2">
+                    <button onclick="saveBannerUrl()" class="w-full py-2 rounded-xl bg-powder-500 hover:bg-powder-600 text-white font-bold shadow-cute-sm">
+                        ตกลง
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Toast Box -->
+    <div id="toast" class="fixed top-4 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs px-4 py-2.5 rounded-full shadow-lg z-50 transition-all duration-300 opacity-0 pointer-events-none flex items-center gap-2">
+        <i class="fa-solid fa-circle-check text-green-400"></i>
+        <span id="toastMsg">บันทึกสำเร็จ</span>
+    </div>
+
+    <!-- JavaScript Logic Application -->
+    <script>
+        // Sample Default Mock Queue Data
+        const defaultQueues = [
+            { id: 1, name: 'คุณเนย (K.Noey)', queueNo: '01', platform: 'Facebook', status: 'doing', notes: 'ออกแบบกรอบโปรไฟล์สไตล์พาสเทล', date: '25 ต.ค.' },
+            { id: 2, name: 'คุณพั้นช์ (K.Punch)', queueNo: '02', platform: 'LINE', status: 'next', notes: 'ภาพประกอบการ์ตูนแมว', date: '25 ต.ค.' },
+            { id: 3, name: 'คุณมินท์ (K.Mint)', queueNo: '03', platform: 'Instagram', status: 'waiting', notes: 'โลโก้ร้าน MUMU', date: '25 ต.ค.' },
+            { id: 4, name: 'คุณโบว์ (K.Bow)', queueNo: '04', platform: 'LINE', status: 'completed', notes: 'แบนเนอร์สินค้า', date: '24 ต.ค.' }
+        ];
+
+        let queues = [];
+        let isAdmin = true;
+
+        // Load data on page load
+        window.onload = function() {
+            initData();
+            renderApp();
+        };
+
+        function initData() {
+            const savedQueues = localStorage.getItem('mumu_queues');
+            if (savedQueues) {
+                try {
+                    queues = JSON.parse(savedQueues);
+                } catch(e) {
+                    queues = defaultQueues;
+                }
+            } else {
+                queues = defaultQueues;
+                saveToStorage();
+            }
+
+            const savedBanner = localStorage.getItem('mumu_banner');
+            if (savedBanner) {
+                document.getElementById('storeBanner').src = savedBanner;
+            }
+        }
+
+        function saveToStorage() {
+            localStorage.setItem('mumu_queues', JSON.stringify(queues));
+        }
+
+        // Toggle Admin / Customer View Mode
+        function toggleAdminMode() {
+            isAdmin = !isAdmin;
+            const badge = document.getElementById('adminBadge');
+            const toggleText = document.getElementById('adminToggleText');
+            const quickActions = document.getElementById('adminQuickActions');
+            const addFab = document.getElementById('addQueueFab');
+            const changeBannerBtn = document.getElementById('changeBannerBtn');
+
+            if (isAdmin) {
+                badge.classList.remove('hidden');
+                toggleText.textContent = 'โหมดแอดมิน';
+                quickActions.classList.remove('hidden');
+                addFab.classList.remove('hidden');
+                changeBannerBtn.classList.remove('hidden');
+                showToast('สลับเป็นโหมด Admin สำหรับจัดการคิว');
+            } else {
+                badge.classList.add('hidden');
+                toggleText.textContent = 'โหมดลูกค้า';
+                quickActions.classList.add('hidden');
+                addFab.classList.add('hidden');
+                changeBannerBtn.classList.add('hidden');
+                showToast('สลับเป็นโหมดลูกค้า (ดูสถานะคิว)');
+            }
+
+            renderApp();
+        }
+
+        // Render Main UI Component
+        function renderApp() {
+            const container = document.getElementById('queueListContainer');
+            container.innerHTML = '';
+
+            // Find current active queue (doing) and next queue (next)
+            const doingQueue = queues.find(q => q.status === 'doing');
+            const nextQueue = queues.find(q => q.status === 'next');
+            const totalWaiting = queues.filter(q => q.status === 'waiting' || q.status === 'next').length;
+
+            // Render Current Active Queue Card Display
+            if (doingQueue) {
+                document.getElementById('currentQueueNum').textContent = doingQueue.queueNo || ('Q' + doingQueue.id);
+                document.getElementById('currentCustomerName').textContent = doingQueue.name;
+                document.getElementById('currentPlatformBadge').textContent = doingQueue.platform;
+            } else {
+                document.getElementById('currentQueueNum').textContent = '-';
+                document.getElementById('currentCustomerName').textContent = 'ไม่มีคิวที่กำลังทำ';
+                document.getElementById('currentPlatformBadge').textContent = '-';
+            }
+
+            // Render Next Queue Card Display
+            if (nextQueue) {
+                document.getElementById('nextQueueNum').textContent = nextQueue.queueNo || ('Q' + nextQueue.id);
+                document.getElementById('nextCustomerName').textContent = nextQueue.name;
+            } else {
+                document.getElementById('nextQueueNum').textContent = '-';
+                document.getElementById('nextCustomerName').textContent = 'ไม่มีคิวถัดไป';
+            }
+
+            document.getElementById('totalQueueCountBadge').textContent = `รอ ${totalWaiting} คิว`;
+            document.getElementById('queueSummaryText').textContent = `ทั้งหมด ${queues.length} รายการ`;
+
+            // Render Queue List Items
+            if (queues.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-8 bg-white/50 rounded-2xl border border-dashed border-powder-200">
+                        <i class="fa-solid fa-heart-crack text-powder-300 text-3xl mb-2 animate-bounce"></i>
+                        <p class="text-xs text-gray-400 font-medium">ยังไม่มีข้อมูลคิวในระบบ</p>
+                    </div>
+                `;
+                return;
+            }
+
+            queues.forEach((q) => {
+                const card = document.createElement('div');
+                
+                // Set background styling according to status
+                let statusBadgeHTML = '';
+                let borderStyle = 'border-white';
+                let activeAnimIcon = '';
+
+                if (q.status === 'doing') {
+                    borderStyle = 'border-powder-300 ring-2 ring-powder-200/50 bg-gradient-to-r from-white via-powder-50 to-powder-100/40 shadow-cute-sm';
+                    statusBadgeHTML = `<span class="bg-powder-400 text-white text-[10px] px-2 py-0.5 rounded-full font-bold flex items-center gap-1 shadow-xs">
+                        <i class="fa-solid fa-spinner animate-spin text-[9px]"></i> กำลังทำ
+                    </span>`;
+                    // Cute animated icon for currently doing
+                    activeAnimIcon = `<div class="flex items-center gap-1 text-powder-500 text-xs font-bold animate-pulse-glow mr-1">
+                        <i class="fa-solid fa-wand-magic-sparkles text-powder-400 animate-sparkle"></i>
+                        <i class="fa-solid fa-paw text-[11px] animate-float-cute"></i>
+                    </div>`;
+                } else if (q.status === 'next') {
+                    borderStyle = 'border-pastel-pink bg-white shadow-xs';
+                    statusBadgeHTML = `<span class="bg-pastel-pink text-powder-600 text-[10px] px-2 py-0.5 rounded-full font-bold border border-powder-200">
+                        คิวถัดไป
+                    </span>`;
+                } else if (q.status === 'completed') {
+                    borderStyle = 'border-gray-100 bg-gray-50/70 opacity-75';
+                    statusBadgeHTML = `<span class="bg-gray-200 text-gray-600 text-[10px] px-2 py-0.5 rounded-full font-medium">
+                        เสร็จแล้ว
+                    </span>`;
+                } else {
+                    borderStyle = 'border-gray-100 bg-white shadow-xs';
+                    statusBadgeHTML = `<span class="bg-gray-100 text-gray-500 text-[10px] px-2 py-0.5 rounded-full font-medium">
+                        รอคิว
+                    </span>`;
+                }
+
+                // Platform tag colors
+                let platformColor = 'bg-gray-100 text-gray-600';
+                if (q.platform === 'LINE') platformColor = 'bg-green-100 text-green-600 border border-green-200';
+                if (q.platform === 'Facebook') platformColor = 'bg-blue-100 text-blue-600 border border-blue-200';
+                if (q.platform === 'Instagram') platformColor = 'bg-pink-100 text-pink-600 border border-pink-200';
+
+                card.className = `p-3 rounded-2xl border ${borderStyle} transition-all duration-200 relative`;
+                
+                card.innerHTML = `
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2.5">
+                            <!-- Queue Number Badge -->
+                            <div class="w-9 h-9 rounded-xl bg-powder-100 border border-powder-200 flex items-center justify-center font-heading font-extrabold text-powder-600 text-sm shadow-inner-cute">
+                                ${q.queueNo || ('Q' + q.id)}
+                            </div>
+
+                            <div>
+                                <div class="flex items-center gap-1.5">
+                                    <h3 class="font-bold text-xs text-gray-800">${q.name}</h3>
+                                    <span class="text-[9px] px-1.5 py-0.2 rounded-md ${platformColor} font-semibold">
+                                        ${q.platform}
+                                    </span>
+                                </div>
+                                <p class="text-[11px] text-gray-400 mt-0.5 truncate max-w-[150px]">
+                                    ${q.notes || 'ไม่มีหมายเหตุ'}
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center gap-2">
+                            ${activeAnimIcon}
+                            ${statusBadgeHTML}
+                        </div>
+                    </div>
+
+                    ${isAdmin ? `
+                    <!-- Admin Action Buttons Bar -->
+                    <div class="mt-2.5 pt-2 border-t border-gray-100 flex items-center justify-between text-[11px]">
+                        <span class="text-gray-300 font-mono text-[10px]"><i class="fa-regular fa-clock"></i> ${q.date || 'วันนี้'}</span>
+                        <div class="flex items-center gap-1">
+                            <button onclick="changeStatus(${q.id}, 'doing')" class="px-2 py-0.5 rounded-lg bg-powder-100 hover:bg-powder-200 text-powder-600 font-medium transition" title="ตั้งเป็นกำลังทำ">
+                                <i class="fa-solid fa-play text-[9px]"></i> ทำ
+                            </button>
+                            <button onclick="changeStatus(${q.id}, 'next')" class="px-2 py-0.5 rounded-lg bg-pastel-yellow hover:bg-amber-200 text-amber-700 font-medium transition" title="ตั้งเป็นคิวถัดไป">
+                                <i class="fa-solid fa-forward text-[9px]"></i> คิวถัดไป
+                            </button>
+                            <button onclick="changeStatus(${q.id}, 'completed')" class="px-2 py-0.5 rounded-lg bg-pastel-green hover:bg-emerald-200 text-emerald-700 font-medium transition" title="ตั้งเป็นเสร็จเรียบร้อย">
+                                <i class="fa-solid fa-check text-[9px]"></i> เสร็จ
+                            </button>
+                            <button onclick="openEditQueueModal(${q.id})" class="p-1 text-gray-400 hover:text-powder-500 ml-1">
+                                <i class="fa-solid fa-pen-to-square"></i>
+                            </button>
+                            <button onclick="deleteQueue(${q.id})" class="p-1 text-gray-300 hover:text-red-400">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>
+                        </div>
+                    </div>
+                    ` : ''}
+                `;
+
+                container.appendChild(card);
+            });
+        }
+
+        // Action: Quick Advance Queue (ข้ามคิวถัดไปมาเป็นกำลังทำอัตโนมัติ)
+        function advanceQueue() {
+            const currentDoing = queues.find(q => q.status === 'doing');
+            const nextInLine = queues.find(q => q.status === 'next');
+
+            if (currentDoing) {
+                currentDoing.status = 'completed';
+            }
+
+            if (nextInLine) {
+                nextInLine.status = 'doing';
+                // Promote the first waiting customer to 'next'
+                const firstWaiting = queues.find(q => q.status === 'waiting');
+                if (firstWaiting) {
+                    firstWaiting.status = 'next';
+                }
+                showToast(`คิวถัดไป: คุณ ${nextInLine.name} กำลังทำแล้วค่ะ! ✨`);
+            } else {
+                showToast('ไม่มีคิวถัดไปในระบบแล้ว');
+            }
+
+            saveToStorage();
+            renderApp();
+        }
+
+        // Change Queue Status directly
+        function changeStatus(id, newStatus) {
+            const queue = queues.find(q => q.id === id);
+            if (!queue) return;
+
+            // If setting to 'doing', reset any other item currently 'doing' to completed/waiting
+            if (newStatus === 'doing') {
+                queues.forEach(q => {
+                    if (q.status === 'doing' && q.id !== id) {
+                        q.status = 'completed';
+                    }
+                });
+            }
+
+            queue.status = newStatus;
+            saveToStorage();
+            renderApp();
+            showToast(`อัปเดตสถานะของ ${queue.name} เรียบร้อย`);
+        }
+
+        // Delete Queue Item
+        function deleteQueue(id) {
+            queues = queues.filter(q => q.id !== id);
+            saveToStorage();
+            renderApp();
+            showToast('ลบคิวออกจากระบบแล้ว');
+        }
+
+        // Modal Controls
+        function openAddQueueModal() {
+            document.getElementById('modalTitle').innerHTML = `<i class="fa-solid fa-heart-circle-plus text-powder-400"></i> เพิ่มคิวลูกค้าใหม่`;
+            document.getElementById('queueForm').reset();
+            document.getElementById('editQueueId').value = '';
+            
+            // Auto generate next queue number
+            const nextNum = (queues.length + 1).toString().padStart(2, '0');
+            document.getElementById('inputQueueNumber').value = nextNum;
+
+            const modal = document.getElementById('queueModal');
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                document.getElementById('queueModalContent').classList.remove('scale-95');
+            }, 10);
+        }
+
+        function openEditQueueModal(id) {
+            const q = queues.find(item => item.id === id);
+            if (!q) return;
+
+            document.getElementById('modalTitle').innerHTML = `<i class="fa-solid fa-pen-to-square text-powder-400"></i> แก้ไขข้อมูลคิว`;
+            document.getElementById('editQueueId').value = q.id;
+            document.getElementById('inputCustomerName').value = q.name;
+            document.getElementById('inputQueueNumber').value = q.queueNo || '';
+            document.getElementById('inputPlatform').value = q.platform || 'LINE';
+            document.getElementById('inputStatus').value = q.status || 'next';
+            document.getElementById('inputNotes').value = q.notes || '';
+
+            const modal = document.getElementById('queueModal');
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                document.getElementById('queueModalContent').classList.remove('scale-95');
+            }, 10);
+        }
+
+        function closeQueueModal() {
+            const modal = document.getElementById('queueModal');
+            modal.classList.add('opacity-0');
+            document.getElementById('queueModalContent').classList.add('scale-95');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 200);
+        }
+
+        function handleFormSubmit(e) {
+            e.preventDefault();
+
+            const editId = document.getElementById('editQueueId').value;
+            const name = document.getElementById('inputCustomerName').value.trim();
+            const queueNo = document.getElementById('inputQueueNumber').value.trim();
+            const platform = document.getElementById('inputPlatform').value;
+            const status = document.getElementById('inputStatus').value;
+            const notes = document.getElementById('inputNotes').value.trim();
+
+            if (editId) {
+                // Edit existing queue
+                const item = queues.find(q => q.id === parseInt(editId));
+                if (item) {
+                    item.name = name;
+                    item.queueNo = queueNo;
+                    item.platform = platform;
+                    item.status = status;
+                    item.notes = notes;
+                }
+            } else {
+                // Add new queue
+                const newId = queues.length > 0 ? Math.max(...queues.map(q => q.id)) + 1 : 1;
+                const today = new Date();
+                const dateStr = `${today.getDate()} ${['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'][today.getMonth()]}`;
+
+                queues.push({
+                    id: newId,
+                    name: name,
+                    queueNo: queueNo || (newId.toString().padStart(2, '0')),
+                    platform: platform,
+                    status: status,
+                    notes: notes,
+                    date: dateStr
+                });
+            }
+
+            // If status set to doing, set others away from doing
+            if (status === 'doing') {
+                const targetId = editId ? parseInt(editId) : queues[queues.length - 1].id;
+                queues.forEach(q => {
+                    if (q.id !== targetId && q.status === 'doing') {
+                        q.status = 'completed';
+                    }
+                });
+            }
+
+            saveToStorage();
+            renderApp();
+            closeQueueModal();
+            showToast('บันทึกข้อมูลคิวเรียบร้อยแล้วค่ะ 💕');
+        }
+
+        // Banner Image Modal Controls
+        function openBannerModal() {
+            const modal = document.getElementById('bannerModal');
+            document.getElementById('bannerUrlInput').value = document.getElementById('storeBanner').src;
+            modal.classList.remove('hidden');
+            setTimeout(() => modal.classList.remove('opacity-0'), 10);
+        }
+
+        function closeBannerModal() {
+            const modal = document.getElementById('bannerModal');
+            modal.classList.add('opacity-0');
+            setTimeout(() => modal.classList.add('hidden'), 200);
+        }
+
+        function selectPresetBanner(url) {
+            document.getElementById('bannerUrlInput').value = url;
+        }
+
+        function saveBannerUrl() {
+            const url = document.getElementById('bannerUrlInput').value.trim();
+            if (url) {
+                document.getElementById('storeBanner').src = url;
+                localStorage.setItem('mumu_banner', url);
+                showToast('เปลี่ยนรูป Banner ร้านแล้ว!');
+            }
+            closeBannerModal();
+        }
+
+        // Toast Notification Helper
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toastMsg').textContent = msg;
+            toast.classList.remove('opacity-0', 'pointer-events-none');
+            toast.classList.add('opacity-100');
+
+            setTimeout(() => {
+                toast.classList.remove('opacity-100');
+                toast.classList.add('opacity-0', 'pointer-events-none');
+            }, 2500);
+        }
+    </script>
+</body>
+</html>
